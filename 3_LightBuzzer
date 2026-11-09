@@ -1,0 +1,28 @@
+#define LDR_PIN A0
+#define BUZZER_PIN D2
+
+#define LIGHT_THRESHOLD 500
+
+void setup() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int lightValue = analogRead(LDR_PIN);
+
+  Serial.print("Light Intensity: ");
+  Serial.println(lightValue);
+
+  // LDR analog output decreases as light increases
+  if (lightValue < LIGHT_THRESHOLD) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    Serial.println("Bright - Buzzer ON");
+  } else {
+    digitalWrite(BUZZER_PIN, LOW);
+    Serial.println("Dark - Buzzer OFF");
+  }
+
+  delay(500);
+}

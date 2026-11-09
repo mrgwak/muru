@@ -1,0 +1,28 @@
+#define LDR_PIN A0
+#define LED_PIN D2
+
+#define LIGHT_THRESHOLD 500
+
+void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int lightValue = analogRead(LDR_PIN);
+
+  Serial.print("Light Intensity: ");
+  Serial.println(lightValue);
+
+  // Higher light intensity produces a lower LDR reading
+  if (lightValue < LIGHT_THRESHOLD) {
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("Bright - LED ON");
+  } else {
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("Dark - LED OFF");
+  }
+
+  delay(500);
+}

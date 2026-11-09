@@ -1,0 +1,134 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
+#include <DHT.h>
+
+// Wi-Fi credentials
+const char* ssid = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+// HiveMQ Cloud credentials
+const char* mqtt_server = "YOUR_BROKER_URL";
+const int mqtt_port = 8883;
+const char* mqtt_user = "YOUR_MQTT_USERNAME";
+const char* mqtt_password = "YOUR_MQTT_PASSWORD";
+
+// MQTT topics
+const char* tempTopic = "temperature";
+const char* humTopic = "humidity";
+const char* ledTopic = "led";
+
+// Pin configuration
+#define DHTPIN D1
+#define DHTTYPE DHT11
+#define LED_PIN D2
+
+DHT dht(DHTPIN, DHTTYPE);
+
+WiFiClientSecure espClient;
+PubSubClient client(espClient);
+
+unsigned long lastPublish = 0;
+
+// Handle incoming MQTT messages
+void callback(char* topic, byte* payload, unsigned int length) {
+  String msg = "";
+
+  for (int i = 0; i < length; i++) {
+    msg += (char)payload[i];
+  }
+
+  if (String(topic) == ledTopic) {
+    if (msg == "ON" || msg == "on") {
+      digitalWrite(LED_PIN, HIGH);
+      Serial.println("LED ON");
+    }
+    else if (msg == "OFF" || msg == "off") {
+      digitalWrite(LED_PIN, LOW);
+      Serial.println("LED OFF");
+    }
+  }
+}
+
+// Connect to Wi-Fi
+void setupWiFi() {
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to Wi-Fi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWi-Fi Connected");
+}
+
+// Reconnect to MQTT broker
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Connecting to HiveMQ...");
+
+    if (client.connect("NodeMCU_DHT11", mqtt_user, mqtt_password)) {
+      Serial.println("Connected");
+      client.subscribe(ledTopic);
+      Serial.println("Subscribed: led");
+    } else {
+      Serial.print("Failed, rc=");
+      Serial.println(client.state());
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  dht.begin();
+  setupWiFi();
+
+  espClient.setInsecure();
+
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
+}
+
+void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+
+  client.loop();
+
+  if (millis() - lastPublish >= 5000) {
+    lastPublish = millis();
+
+    float t = dht.readTemperature();
+    float h = dht.readHumidity();
+
+    if (isnan(t) || isnan(h)) {
+      Serial.println("DHT11 Read Error");
+      return;
+    }
+
+    char temp[10], hum[10];
+
+    dtostrf(t, 4, 2, temp);
+    dtostrf(h, 4, 2, hum);
+
+    client.publish(tempTopic, temp);
+    client.publish(humTopic, hum);
+
+    Serial.println("--------------------");
+    Serial.print("Temperature: ");
+    Serial.print(t);
+    Serial.println(" C");
+
+    Serial.print("Humidity: ");
+    Serial.print(h);
+    Serial.println(" %");
+  }
+}

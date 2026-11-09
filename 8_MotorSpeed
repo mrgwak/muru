@@ -1,0 +1,28 @@
+#define LDR_PIN D1
+#define MOTOR_PWM D2
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(LDR_PIN, INPUT);
+  pinMode(MOTOR_PWM, OUTPUT);
+
+  analogWriteRange(1023);
+}
+
+void loop() {
+  int light = digitalRead(LDR_PIN);
+
+  if (light == HIGH) {
+    analogWrite(MOTOR_PWM, 155);
+    Serial.println("Dark");
+    Serial.println("Motor Speed : LOW");
+  } else {
+    analogWrite(MOTOR_PWM, 900);
+    Serial.println("Bright");
+    Serial.println("Motor Speed : HIGH");
+  }
+
+  Serial.println("----------------------");
+  delay(500);
+}

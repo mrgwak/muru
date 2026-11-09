@@ -1,0 +1,65 @@
+#include <SoftwareSerial.h>
+
+#define TX1 D1
+#define RX1 D2
+
+SoftwareSerial txrxLine(RX1, TX1);
+
+char Tx_secretKey = 'K';
+char Rx_secretKey = 'K';
+
+String message = "HELLO";
+
+String xorCipher(String data, char key) {
+  for (int i = 0; i < data.length(); i++) {
+    data[i] = data[i] ^ key;
+  }
+  return data;
+}
+
+String toHex(String data) {
+  String hex = "";
+
+  for (int i = 0; i < data.length(); i++) {
+    if ((unsigned char)data[i] < 16) hex += "0";
+    hex += String((unsigned char)data[i], HEX);
+  }
+
+  return hex;
+}
+
+String fromHex(String hex) {
+  String data = "";
+
+  for (int i = 0; i < hex.length(); i += 2) {
+    data += (char)strtol(hex.substring(i, i + 2).c_str(), NULL, 16);
+  }
+
+  return data;
+}
+
+void setup() {
+  Serial.begin(9600);
+  txrxLine.begin(9600);
+
+  String encrypted = xorCipher(message, Tx_secretKey);
+  String packet = toHex(encrypted);
+
+  Serial.println("Original: " + message);
+  Serial.println("Sent HEX: " + packet);
+
+  txrxLine.println(packet);
+}
+
+void loop() {
+  if (txrxLine.available()) {
+    String received = txrxLine.readStringUntil('\n');
+    received.trim();
+
+    Serial.println("Recv HEX: " + received);
+
+    String decrypted = xorCipher(fromHex(received), Rx_secretKey);
+
+    Serial.println("Decrypted: " + decrypted);
+  }
+}
